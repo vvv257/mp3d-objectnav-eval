@@ -1,0 +1,20 @@
+benchmark:
+  name: mp3d_objectnav_v1
+  # Habitat-Lab config path resolved relative to Habitat's config directory.
+  habitat_config: benchmark/nav/objectnav/objectnav_mp3d.yaml
+  split: val
+  data_path: data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz
+  scenes_dir: data/scene_datasets/
+  max_episode_steps: 500
+  seed: 100
+  overrides:
+    - habitat.environment.iterator_options.shuffle=False
+
+evaluation:
+  allowed_observations:
+    - rgb
+    - depth
+    - gps
+    - compass
+    - objectgoal
+  strict_actions: true

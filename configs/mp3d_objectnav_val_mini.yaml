@@ -1,0 +1,27 @@
+benchmark:
+  name: mp3d_objectnav_val_mini
+
+  habitat_config: benchmark/nav/objectnav/objectnav_mp3d.yaml
+
+  split: val_mini
+
+  data_path: /home/wangzejin/datasets/MatterPort3D/objectnav/mp3d/v1/{split}/{split}.json.gz
+
+  scenes_dir: /home/wangzejin/datasets/MatterPort3D
+
+  max_episode_steps: 500
+
+  seed: 100
+
+  overrides:
+    - habitat.environment.iterator_options.shuffle=False
+
+evaluation:
+  allowed_observations:
+    - rgb
+    - depth
+    - gps
+    - compass
+    - objectgoal
+
+  strict_actions: true

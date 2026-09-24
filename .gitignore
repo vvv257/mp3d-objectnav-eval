@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Evaluation outputs
+results/
+
+# Local/private configs
+*.local.yaml
+*.local.yml
+
+# Logs
+*.log

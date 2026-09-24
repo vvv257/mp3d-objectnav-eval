@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mp3d-objectnav-eval"
+version = "0.1.0"
+description = "A lightweight, method-agnostic evaluator for MP3D ObjectNav agents on Habitat-Lab."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.4"]
+
+[project.scripts]
+objectnav-eval = "objectnav_eval.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["objectnav_eval*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
