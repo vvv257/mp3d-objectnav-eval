@@ -100,6 +100,17 @@ objectnav-eval \
 
 省略 `--num-episodes` 时会按确定性顺序评测整个 split。
 
+### 中断后会怎样
+
+每完成一个 episode 就会保存结果并显示进度。Agent 或环境报错、`Ctrl+C`
+中断时，评测会立即停止，已完成的 episode 不会丢失，错误记录在
+`errors.jsonl`。排除问题后，在原命令末尾加 `--resume` 即可从下一个
+episode 继续。续跑前会校验 Agent 入口及代码指纹、配置、评测器代码版本、
+Habitat 版本和已完成
+episode 的身份；不一致时会拒绝续跑。不加 `--resume` 也不会覆盖已有结果。
+如果进程被 `kill -9` 或机器断电，可能没有当次错误记录，但之前已完成的
+episode 仍可续跑。
+
 ## 指标
 
 指标直接读取 `Habitat.Env.get_metrics()`，不在本项目中重新实现：
