@@ -5,6 +5,10 @@ __pycache__/
 
 # Testing
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
 .coverage
 htmlcov/
 
@@ -17,6 +21,7 @@ dist/
 .venv/
 venv/
 env/
+.env
 
 # IDE
 .vscode/
@@ -27,6 +32,13 @@ env/
 
 # Evaluation outputs
 results/
+
+# Datasets and model artifacts
+data/
+*.ckpt
+*.onnx
+*.pt
+*.pth
 
 # Local/private configs
 *.local.yaml

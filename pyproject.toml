@@ -17,7 +17,7 @@ test = ["pytest>=7.4"]
 objectnav-eval = "objectnav_eval.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["objectnav_eval*"]
+include = ["objectnav_eval*", "examples*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

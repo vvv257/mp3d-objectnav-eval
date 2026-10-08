@@ -1,5 +1,7 @@
 from typing import Any, Mapping
 
+import pytest
+
 from objectnav_eval.agent import EpisodeInfo, ObjectNavAgent
 from objectnav_eval.backends.base import EvaluationBackend
 from objectnav_eval.evaluator import EvaluationConfig, Evaluator
@@ -63,3 +65,9 @@ def test_evaluator_filters_and_aggregates():
     assert summary["spl"] == 0.5
     assert summary["avg_num_steps"] == 2.0
     assert backend.closed
+
+
+@pytest.mark.parametrize("max_episodes", [0, -1])
+def test_evaluation_config_rejects_non_positive_episode_limit(max_episodes):
+    with pytest.raises(ValueError, match="max_episodes must be positive"):
+        EvaluationConfig(max_episodes=max_episodes)

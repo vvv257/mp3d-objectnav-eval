@@ -5,9 +5,9 @@ benchmark:
 
   split: val_mini
 
-  data_path: /home/wangzejin/datasets/MatterPort3D/objectnav/mp3d/v1/{split}/{split}.json.gz
+  data_path: data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz
 
-  scenes_dir: /home/wangzejin/datasets/MatterPort3D
+  scenes_dir: data/scene_datasets/
 
   max_episode_steps: 500
 

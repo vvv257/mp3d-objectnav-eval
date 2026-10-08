@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -20,6 +21,7 @@ def write_results(
     output_dir: str | Path,
     results: Sequence[Mapping[str, Any]],
     run_metadata: Mapping[str, Any],
+    evaluator_config: str | Path | None = None,
 ) -> dict[str, Any]:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -36,7 +38,17 @@ def write_results(
     with (output / "run_metadata.json").open("w", encoding="utf-8") as f:
         json.dump(dict(run_metadata), f, indent=2, default=_json_default)
 
-    flat_keys = ["episode_index", "episode_id", "scene_id", "num_steps"]
+    if evaluator_config is not None:
+        shutil.copyfile(evaluator_config, output / "evaluator_config.yaml")
+
+    flat_keys = [
+        "episode_index",
+        "episode_id",
+        "episode_uid",
+        "scene_id",
+        "num_steps",
+        "elapsed_seconds",
+    ]
     metric_keys = sorted(
         {
             key

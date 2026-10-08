@@ -13,6 +13,7 @@ of the **agent**, not the evaluator.
 - Reference Habitat config: `benchmark/nav/objectnav/objectnav_mp3d.yaml`
 - Default maximum episode length: 500 steps
 - Episode order: deterministic (`shuffle=False`)
+- Reference runtime: Python 3.9, Habitat-Lab 0.2.4, Habitat-Sim 0.2.4
 
 The repository does not redistribute MP3D assets or ObjectNav episode files.
 Users must obtain them under their original licenses/terms.
@@ -79,19 +80,15 @@ configuration and are recorded in the output.
 
 Every evaluation run must retain:
 
-- evaluator YAML
+- the exact evaluator YAML and its SHA-256 hash
 - Habitat config path
 - all Habitat overrides
 - agent entrypoint
-- Python/platform metadata
+- evaluator, Habitat-Lab, Habitat-Sim, Python, and platform versions
 - per-episode metrics
 
 Before publishing cross-method numbers, all compared methods must use the same
 protocol file and evaluator configuration.
 
-## Reference environment
-
-For the first reproducible environment, `habitat-lab==0.3.20231024` is a useful
-reference pin because a current public MP3D ObjectNav evaluator (LightNav-0)
-uses it successfully. Treat this as an engineering compatibility pin, not as a
-claim that it is the original 2021 challenge software version.
+`val_mini` runs are installation smoke tests only and must not be reported as
+formal MP3D ObjectNav benchmark results.

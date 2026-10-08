@@ -20,6 +20,10 @@ class EvaluationConfig:
     max_episodes: int | None = None
     strict_actions: bool = True
 
+    def __post_init__(self) -> None:
+        if self.max_episodes is not None and self.max_episodes <= 0:
+            raise ValueError("max_episodes must be positive")
+
 
 def filter_observation(
     observation: Mapping[str, Any], allowed: Iterable[str]
