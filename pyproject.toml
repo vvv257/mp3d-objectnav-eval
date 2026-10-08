@@ -7,8 +7,13 @@ name = "mp3d-objectnav-eval"
 version = "0.1.0"
 description = "A lightweight, method-agnostic evaluator for MP3D ObjectNav agents on Habitat-Lab."
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = ["PyYAML>=6.0"]
+
+[project.urls]
+Repository = "https://github.com/vvv257/mp3d-objectnav-eval"
+Issues = "https://github.com/vvv257/mp3d-objectnav-eval/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=7.4"]

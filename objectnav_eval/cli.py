@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import platform
+import subprocess
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -24,6 +25,30 @@ def _distribution_version(name: str) -> str:
         return "unknown"
 
 
+def _git_state(repo_root: Path | None = None) -> dict[str, object]:
+    root = repo_root or Path(__file__).resolve().parents[1]
+    if not (root / ".git").exists():
+        return {"commit": None, "dirty": None}
+
+    try:
+        commit = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        status = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return {"commit": None, "dirty": None}
+
+    return {"commit": commit, "dirty": bool(status.strip())}
+
+
 def build_run_metadata(
     *,
     agent_entrypoint: str,
@@ -32,9 +57,12 @@ def build_run_metadata(
     overrides: Sequence[str],
 ) -> dict[str, object]:
     config_path = Path(evaluator_config).resolve()
+    git_state = _git_state()
     return {
         "agent_entrypoint": agent_entrypoint,
         "evaluator_version": __version__,
+        "evaluator_git_commit": git_state["commit"],
+        "evaluator_git_dirty": git_state["dirty"],
         "evaluator_config": str(config_path),
         "evaluator_config_sha256": hashlib.sha256(
             config_path.read_bytes()
