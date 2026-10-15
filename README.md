@@ -4,27 +4,47 @@
 Agent。评测器只负责环境、episode、观测过滤、动作校验、指标和结果保存；目标
 识别、建图、探索、规划与策略全部属于 Agent，不写进评测器。
 
-## 参考环境
+## 已验证环境
 
 - Python 3.9
-- Habitat-Lab 0.2.4
-- Habitat-Sim 0.2.4
+- reference track：Habitat-Lab / Habitat-Sim 0.2.4
+- compatibility track：Habitat-Lab / Habitat-Sim 0.3.3
 - MP3D ObjectNav v1 episodes
 - Matterport3D 场景数据
 
-Habitat 和 MP3D 不会由本项目自动安装或分发。
+两个版本都已用真实 MP3D `val_mini` episode 验证 CLI、观测、动作、指标和输出。
+但完整 split 的跨版本数值一致性尚未验证，正式结果必须注明 Habitat-Lab 与
+Habitat-Sim 版本，不要把 0.2.4 和 0.3.3 的结果混在同一排名中。
+
+Habitat 和 MP3D 不会由本项目自动安装或分发，以免覆盖使用者已有的仿真环境。
 
 ## 安装
 
-先进入已经能运行 Habitat 0.2.4 的 Conda 环境，再安装评测器：
+先准备一个能独立运行 Habitat 的 Conda 环境，再安装评测器。已有 Habitat 0.2.4
+环境时可直接跳到克隆本项目这一步。
+
+新建 Habitat 0.3.3 环境的实测命令：
+
+```bash
+conda create -n objectnav-eval-h033 python=3.9 \
+  habitat-sim=0.3.3 headless -c conda-forge -c aihabitat
+conda activate objectnav-eval-h033
+
+git clone --branch v0.3.3 --depth 1 \
+  https://github.com/facebookresearch/habitat-lab.git habitat-lab-v0.3.3
+python -m pip install -e habitat-lab-v0.3.3/habitat-lab
+```
+
+然后安装评测器：
 
 ```bash
 git clone git@github.com:vvv257/mp3d-objectnav-eval.git
 cd mp3d-objectnav-eval
-conda activate objectnav-eval
 python -m pip install -e ".[test]"
 pytest -q
 ```
+
+建议 0.2.4 和 0.3.3 使用不同 Conda 环境，不要在原环境中直接升级 Habitat。
 
 ## 数据路径
 
