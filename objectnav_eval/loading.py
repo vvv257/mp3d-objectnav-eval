@@ -8,7 +8,7 @@ from objectnav_eval.agent import ObjectNavAgent
 
 
 def load_agent(entrypoint: str) -> ObjectNavAgent:
-    """Load `module:ClassOrFactory` and return an ObjectNavAgent."""
+    """Load an explicit reset/act object; no third-party signature guessing."""
     if ":" not in entrypoint:
         raise ValueError("Agent entrypoint must look like 'package.module:AgentClass'")
     module_name, attr_name = entrypoint.split(":", 1)
@@ -22,8 +22,8 @@ def load_agent(entrypoint: str) -> ObjectNavAgent:
     else:
         agent = target
 
-    if not isinstance(agent, ObjectNavAgent):
+    if not all(callable(getattr(agent, name, None)) for name in ("reset", "act")):
         raise TypeError(
-            f"Loaded object {entrypoint!r} must implement ObjectNavAgent; got {type(agent)}"
+            f"Loaded object {entrypoint!r} must provide callable reset(episode) and act(observation); got {type(agent)}"
         )
     return agent

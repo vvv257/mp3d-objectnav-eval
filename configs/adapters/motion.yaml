@@ -1,0 +1,9 @@
+type: motion
+rotate_field: degrees
+move_field: meters
+# Optional transforms use only already permitted sensors.
+observations:
+  rgb:
+    transpose: [2, 0, 1]
+  depth:
+    dtype: float32

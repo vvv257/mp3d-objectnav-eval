@@ -15,6 +15,43 @@ class MetadataAgent(ObjectNavAgent):
         return "stop"
 
 
+def test_cli_runtime_resume_rejection_leaves_saved_run_untouched(tmp_path, monkeypatch):
+    config = tmp_path / "eval.yaml"
+    config.write_text("benchmark:\n  habitat_config: test.yaml\n")
+    state = {"closed": False, "backend_closed": False, "writes": 0}
+
+    class Store:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def bind_runtime(self, runtime):
+            raise ValueError("runtime changed")
+
+        def record_failure(self, failure):
+            state["writes"] += 1
+
+        def close(self):
+            state["closed"] = True
+
+    class Backend:
+        def __init__(self, **kwargs):
+            pass
+
+        def configure_protocol(self, protocol):
+            return {"forward_step_size": .5}
+
+        def close(self):
+            state["backend_closed"] = True
+
+    monkeypatch.setattr(cli, "RunStore", Store)
+    monkeypatch.setattr(cli, "HabitatBackend", Backend)
+    monkeypatch.setattr(cli, "load_agent", lambda _: MetadataAgent())
+    monkeypatch.setattr(sys, "argv", ["objectnav-eval", "--agent", "x:Agent", "--config", str(config), "--output", str(tmp_path / "run"), "--resume"])
+    with pytest.raises((ValueError, SystemExit)):
+        cli.main()
+    assert state == {"closed": True, "backend_closed": True, "writes": 0}
+
+
 def test_git_state_records_commit_and_dirty_tree(tmp_path: Path):
     subprocess.run(["git", "init", "-q", tmp_path], check=True)
     subprocess.run(

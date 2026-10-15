@@ -44,7 +44,7 @@ class FakeBackend(EvaluationBackend):
         return {"rgb": "rgb", "depth": "depth", "semantic": "MUST_NOT_LEAK"}
 
     def get_metrics(self):
-        return {"success": 1.0, "spl": 0.5}
+        return {"success": 1.0, "spl": 0.5, "soft_spl": 0.5, "distance_to_goal": 0.0}
 
     def close(self) -> None:
         self.closed = True

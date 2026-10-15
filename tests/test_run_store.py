@@ -35,6 +35,33 @@ def episode(index: int) -> dict:
     }
 
 
+@pytest.mark.parametrize("key", ["task_protocol_sha256", "adapter_config_sha256", "adapter_code_sha256", "action_converter_version", "protocol_version"])
+def test_resume_rejects_changed_protocol_or_adapter(tmp_path, key):
+    config = tmp_path / "eval.yaml"
+    config.write_text("benchmark: {}\n")
+    original = {**metadata(), key: "original"}
+    first = RunStore(tmp_path / "run", original, config)
+    first.start(total_episodes=1)
+    first.close()
+    with pytest.raises(ValueError, match=key):
+        RunStore(tmp_path / "run", {**original, key: "changed"}, config, resume=True)
+
+
+def test_resume_rejects_changed_effective_runtime(tmp_path):
+    config = tmp_path / "eval.yaml"
+    config.write_text("benchmark: {}\n")
+    first = RunStore(tmp_path / "run", metadata(), config)
+    first.bind_runtime({"forward_step_size": .25})
+    first.start(total_episodes=1)
+    first.close()
+    second = RunStore(tmp_path / "run", metadata(), config, resume=True)
+    try:
+        with pytest.raises(ValueError, match="runtime"):
+            second.bind_runtime({"forward_step_size": .5})
+    finally:
+        second.close()
+
+
 def test_run_store_persists_each_episode_and_marks_completion(tmp_path: Path):
     config = tmp_path / "eval.yaml"
     config.write_text("benchmark: {}\n", encoding="utf-8")

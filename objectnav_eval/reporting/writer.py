@@ -47,6 +47,11 @@ def write_results(
         "episode_uid",
         "scene_id",
         "num_steps",
+        "primitive_action_count",
+        "agent_command_count",
+        "task_id",
+        "protocol_version",
+        "action_conversion_error",
         "elapsed_seconds",
     ]
     metric_keys = sorted(

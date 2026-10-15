@@ -65,3 +65,12 @@ def test_backend_uses_habitat_api_shared_by_024_and_033(monkeypatch):
 
     backend.close()
     assert backend._env.closed is True
+
+
+def test_protocol_rejects_missing_backend_action():
+    import pytest
+    from objectnav_eval.tasks import load_protocol
+    backend = HabitatBackend.__new__(HabitatBackend)
+    backend._env = SimpleNamespace(action_space=SimpleNamespace(spaces={"stop": None}))
+    with pytest.raises(ValueError, match="actions"):
+        backend.configure_protocol(load_protocol())

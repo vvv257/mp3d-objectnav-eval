@@ -10,11 +10,15 @@ import subprocess
 import sys
 import time
 import traceback
+from dataclasses import asdict
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Sequence
 
 from objectnav_eval import __version__
+from objectnav_eval.adapters import build_adapter
+from objectnav_eval.actions.converters import CONVERTER_VERSION
+from objectnav_eval.tasks import is_builtin_protocol, load_protocol
 from objectnav_eval.agent import ObjectNavAgent
 from objectnav_eval.backends.habitat import HabitatBackend
 from objectnav_eval.config import habitat_overrides, load_yaml
@@ -193,6 +197,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", required=True, help="Evaluator YAML")
     parser.add_argument("--output", required=True, help="Output directory")
     parser.add_argument("--num-episodes", type=int, default=None)
+    parser.add_argument("--adapter-config", help="Explicit agent adapter YAML")
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -235,17 +240,31 @@ def main() -> None:
     config = load_yaml(args.config)
     benchmark = config["benchmark"]
     evaluation = config.get("evaluation", {})
+    task_path = config.get("task_protocol")
+    if task_path and not is_builtin_protocol(task_path):
+        task_path = Path(args.config).resolve().parent / task_path
+    protocol = load_protocol(task_path)
+    benchmark.setdefault("habitat_config", protocol.habitat_config)
+    if task_path and benchmark["habitat_config"] != protocol.habitat_config:
+        raise ValueError("benchmark habitat_config must match the explicit task protocol")
+    adapter_path = args.adapter_config
+    if adapter_path is None and config.get("adapter_config"):
+        adapter_path = Path(args.config).resolve().parent / config["adapter_config"]
+    adapter_config = load_yaml(adapter_path) if adapter_path else {}
+    if set(adapter_config.get("observations", {})) - set(protocol.allowed_observations):
+        raise ValueError("Adapter requests observations outside the task protocol")
     overrides = habitat_overrides(config)
 
     evaluation_config = EvaluationConfig(
         allowed_observations=tuple(
             evaluation.get(
                 "allowed_observations",
-                ["rgb", "depth", "gps", "compass", "objectgoal"],
+                protocol.allowed_observations,
             )
         ),
         max_episodes=args.num_episodes,
         strict_actions=bool(evaluation.get("strict_actions", True)),
+        protocol=protocol,
     )
     agent = load_agent(args.agent)
     metadata = build_run_metadata(
@@ -256,6 +275,28 @@ def main() -> None:
         overrides=overrides,
         output_dir=args.output,
     )
+    agent = build_adapter(agent, adapter_config)
+    metadata.update({
+        "task_id": protocol.task_id,
+        "protocol_version": protocol.protocol_version,
+        "task_protocol_sha256": protocol.sha256,
+        "task_protocol_file_sha256": _file_sha256(Path(task_path)) if task_path and not is_builtin_protocol(task_path) else None,
+        "task_protocol": asdict(protocol),
+        "adapter_type": adapter_config.get("type", "identity"),
+        "adapter_config": adapter_config,
+        "adapter_config_sha256": _file_sha256(Path(adapter_path)) if adapter_path else hashlib.sha256(b"{}").hexdigest(),
+        "adapter_code_sha256": _agent_code_sha256(agent),
+        "observation_conversion_rules": adapter_config.get("observations", {}),
+        "action_converter_version": CONVERTER_VERSION,
+        "reproducibility_complete": False,
+        "reproducibility_notes": "Source fingerprints cover Python/config files only; external libraries, dynamic imports, model weights and custom controllers require separately recorded hashes.",
+    })
+    if protocol.episode_identity != "objectnav_v1":
+        import importlib
+        module_name, name = protocol.episode_identity.split(":", 1)
+        identity = getattr(importlib.import_module(module_name), name)
+        source = inspect.getsourcefile(identity)
+        metadata["episode_identity_code_sha256"] = _file_sha256(Path(source)) if source else None
     store = RunStore(
         args.output,
         metadata,
@@ -277,8 +318,23 @@ def main() -> None:
         )
         raise SystemExit(1) from exc
 
-    evaluator = Evaluator(backend, evaluation_config)
     try:
+        runtime = backend.configure_protocol(protocol)
+    except BaseException as exc:
+        backend.close()
+        store.record_failure(_run_failure("backend.protocol", exc))
+        store.close()
+        raise SystemExit(f"Evaluation stopped during backend.protocol: {exc}") from exc
+
+    try:
+        store.bind_runtime(runtime)
+    except BaseException:
+        backend.close()
+        store.close()
+        raise
+
+    try:
+        evaluator = Evaluator(backend, evaluation_config)
         total_episodes = evaluator.total_episodes
     except BaseException as exc:
         backend.close()

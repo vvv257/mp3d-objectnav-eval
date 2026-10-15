@@ -97,7 +97,7 @@ class HabitatBackend(EvaluationBackend):
         info = EpisodeInfo(
             episode_id=str(episode.episode_id),
             scene_id=str(episode.scene_id),
-            episode_uid=_stable_episode_uid(episode),
+            episode_uid=self._protocol.identity(episode) if hasattr(self, "_protocol") else _stable_episode_uid(episode),
         )
 
         return info, observation
@@ -110,3 +110,58 @@ class HabitatBackend(EvaluationBackend):
 
     def close(self) -> None:
         self._env.close()
+
+    def configure_protocol(self, protocol):
+        """Validate the resolved environment before any agent episode is run."""
+        supported = set(self._env.action_space.spaces)
+        missing = set(protocol.allowed_actions) - supported
+        if missing:
+            raise ValueError(f"Habitat does not support protocol actions: {sorted(missing)}")
+        observations = set(self._env.observation_space.spaces)
+        missing = set(protocol.allowed_observations) - observations
+        if missing:
+            raise ValueError(f"Habitat does not provide protocol observations: {sorted(missing)}")
+        from omegaconf import OmegaConf
+        resolved = OmegaConf.to_container(self._config, resolve=True)
+        habitat = resolved["habitat"]
+        missing = set(protocol.required_metrics) - set(habitat["task"]["measurements"])
+        if missing:
+            raise ValueError(f"Habitat does not provide protocol metrics: {sorted(missing)}")
+        sim = habitat["simulator"]
+        self.action_parameters = {key: sim.get(key) for key in ("forward_step_size", "turn_angle", "tilt_angle")}
+        self._protocol = protocol
+        return {
+            "action_parameters": self.action_parameters,
+            "success_criteria": _measurement_parameters(habitat["task"].get("measurements")),
+            "effective_habitat_config_sha256": hashlib.sha256(json.dumps(resolved, sort_keys=True).encode()).hexdigest(),
+            "effective_task": habitat["task"],
+            "effective_sensors": sim.get("agents"),
+            "effective_environment": habitat["environment"],
+            "available_actions": sorted(supported),
+        }
+
+    @property
+    def protocol(self):
+        """Task protocol this backend validated itself against, if any."""
+        return getattr(self, "_protocol", None)
+
+
+_SUCCESS_CRITERIA_FIELDS = ("success_distance", "distance_to")
+
+
+def _measurement_parameters(measurements: Any) -> dict[str, Any]:
+    """Record task success thresholds as the resolved task defines them.
+
+    Habitat composes measurements into a name-keyed mapping whose entries carry
+    the effective parameters (task overrides and config defaults alike).
+    """
+
+    entries = measurements.values() if isinstance(measurements, Mapping) else measurements or ()
+    criteria: dict[str, Any] = {}
+    for measurement in entries:
+        if not isinstance(measurement, Mapping):
+            continue
+        for key in _SUCCESS_CRITERIA_FIELDS:
+            if key in measurement:
+                criteria[key] = measurement[key]
+    return criteria

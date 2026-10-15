@@ -1,0 +1,9 @@
+# Example only: replace IDs with your Agent's documented action IDs.
+type: discrete
+mapping:
+  0: stop
+  1: move_forward
+  2: turn_left
+  3: turn_right
+  4: look_up
+  5: look_down

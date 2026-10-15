@@ -1,0 +1,20 @@
+from .base import TaskProtocol
+
+
+def objectnav_protocol():
+    return TaskProtocol(
+        task_id="mp3d_objectnav_v1", protocol_version=1,
+        allowed_actions=("stop", "move_forward", "turn_left", "turn_right", "look_up", "look_down"),
+        allowed_observations=("rgb", "depth", "gps", "compass", "objectgoal"),
+        required_metrics=("success", "spl", "soft_spl", "distance_to_goal"),
+        habitat_config="benchmark/nav/objectnav/objectnav_mp3d.yaml",
+        episode_identity="objectnav_v1",
+        observation_specs={
+            "rgb": {"layout": "HWC", "dtype": "uint8", "range": [0, 255]},
+            "depth": {"layout": "HWC", "dtype": "float32", "units": "resolved Habitat depth configuration"},
+            "gps": {"dtype": "float32", "units": "meters, episode-relative Habitat coordinates"},
+            "compass": {"dtype": "float32", "units": "radians, episode-relative Habitat heading"},
+            "objectgoal": {"units": "dataset category id"},
+        },
+        action_parameters={"source": "resolved Habitat configuration"},
+    )

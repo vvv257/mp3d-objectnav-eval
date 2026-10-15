@@ -14,6 +14,15 @@ from objectnav_eval.reporting.writer import _json_default
 
 
 _COMPATIBILITY_KEYS = (
+    "task_id",
+    "protocol_version",
+    "task_protocol_sha256",
+    "task_protocol_file_sha256",
+    "episode_identity_code_sha256",
+    "adapter_type",
+    "adapter_config_sha256",
+    "adapter_code_sha256",
+    "action_converter_version",
     "agent_entrypoint",
     "evaluator_version",
     "evaluator_git_commit",
@@ -244,6 +253,12 @@ class RunStore:
         self._write_derived_outputs()
         _atomic_write_json(self.metadata_path, self.metadata)
 
+    def bind_runtime(self, runtime):
+        saved = self.metadata.get("runtime")
+        if self.resuming and (saved is not None or self.results) and saved != runtime:
+            raise ValueError("cannot resume because effective runtime configuration changed")
+        self.metadata["runtime"] = runtime
+
     def record_failure(self, failure: Mapping[str, Any]) -> None:
         record = dict(failure)
         record.setdefault("recorded_at", _now())
@@ -286,6 +301,11 @@ class RunStore:
             "episode_uid",
             "scene_id",
             "num_steps",
+            "primitive_action_count",
+            "agent_command_count",
+            "task_id",
+            "protocol_version",
+            "action_conversion_error",
             "elapsed_seconds",
         ]
         metric_keys = sorted(

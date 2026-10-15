@@ -1,4 +1,4 @@
-# MP3D ObjectNav Evaluation Protocol (v0.1)
+# MP3D ObjectNav Evaluation Protocol (protocol version 1)
 
 This document freezes the public contract of the evaluator. Method-specific
 recognition, mapping, memory, exploration, planning, and policy logic are part
@@ -43,7 +43,8 @@ metrics.
 
 ## Agent API
 
-Every method must implement:
+Every method must provide callable `reset` and `act` methods. Inheriting
+`ObjectNavAgent` remains supported but is optional:
 
 ```python
 class MyAgent(ObjectNavAgent):
@@ -54,7 +55,7 @@ class MyAgent(ObjectNavAgent):
         return "move_forward"
 ```
 
-Allowed action names in v0.1 are:
+The default ObjectNav task protocol permits these primitive actions:
 
 - `stop`
 - `move_forward`
@@ -62,6 +63,20 @@ Allowed action names in v0.1 are:
 - `turn_right`
 - `look_up`
 - `look_down`
+
+Typed commands `primitive`, `move` (positive meters), and `rotate` (nonzero
+degrees, positive left) are supported. Motion commands use the effective
+Habitat forward step and turn angle, with half-up quantization
+`floor(abs(request) / step_size + 0.5)`. Zero-step quantization, nonfinite
+parameters, and expansions over 64 primitives are rejected. Each primitive
+consumes one environment step. Environment termination cancels the rest of
+the command; the executor does not add stop or compensate for collisions.
+
+Explicit adapters translate action IDs and permitted observations. Observation
+filtering occurs before adapter invocation. An adapter cannot change task
+physics or success criteria. This API boundary is not a process sandbox:
+submitted Agent and custom Adapter code must still be audited for privileged
+access. Waypoints, velocity and semantic navigation skills are unsupported.
 
 ## Metrics
 
@@ -76,6 +91,32 @@ this repository. The expected ObjectNav measurements are:
 The exact active measurements are determined by the frozen Habitat benchmark
 configuration and are recorded in the output.
 
+## Task protocols
+
+A task protocol defines what an episode is allowed to ask for: legal actions,
+permitted observations, required metrics, the Habitat config it belongs to, the
+episode identity policy, and where motion parameters come from. Two protocols
+ship with the evaluator:
+
+- `mp3d_objectnav_v1` (default, protocol version 1): `configs/tasks/mp3d_objectnav_v1.yaml`
+- `vln_ce_r2r_v1`: `configs/tasks/vln_ce_r2r.yaml`, mirroring Habitat-Lab 0.2.4
+  `benchmark/nav/vln_r2r.yaml` — actions `stop`, `move_forward`, `turn_left`,
+  `turn_right`; observations `rgb`, `depth`, `instruction`; metrics `success`,
+  `spl`, `distance_to_goal` (that config provides no `ndtw`); episode identity
+  from scene, instruction text and `trajectory_id`.
+
+Each task reads its motion parameters and success criteria from the resolved
+Habitat configuration; no protocol hard-codes step sizes or thresholds. The
+backend refuses a protocol whose actions, observations or metrics the resolved
+environment does not provide, and the evaluator refuses to run when its
+protocol differs from the one the backend validated.
+
+The VLN-CE protocol has only been exercised on a synthetic dataset built from
+real scenes and navmeshes (see README). The official R2R_VLNCE episodes are not
+integrated, so `vln_ce_r2r_v1` results are not VLN-CE benchmark results and must
+not be compared with published VLN-CE numbers. Results from different task
+protocols are not comparable with each other by construction.
+
 ## Reproducibility
 
 Every evaluation run must retain:
@@ -86,6 +127,17 @@ Every evaluation run must retain:
 - agent entrypoint
 - evaluator, Habitat-Lab, Habitat-Sim, Python, and platform versions
 - per-episode metrics
+- task protocol contents/hash and protocol version
+- adapter config/hash, source fingerprint and observation conversion rules
+- effective Habitat configuration hash, motion parameters and sensor settings
+- the resolved success criteria (`distance_to`, `success_distance`)
+- primitive counts, command counts and motion quantization records
+
+Changed task, adapter, converter, code or effective runtime configuration
+prevents resume. Existing result files remain readable; runs started with an
+older evaluator must be resumed using that version. Source fingerprints are
+not complete dependency/model manifests; `reproducibility_complete=false`
+records that limitation explicitly.
 
 Before publishing cross-method numbers, all compared methods must use the same
 protocol file and evaluator configuration.

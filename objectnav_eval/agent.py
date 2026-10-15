@@ -5,14 +5,10 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 
-VALID_ACTIONS = (
-    "stop",
-    "move_forward",
-    "turn_left",
-    "turn_right",
-    "look_up",
-    "look_down",
-)
+# Compatibility alias. TaskProtocol is the authority for execution validation.
+from objectnav_eval.tasks.objectnav import objectnav_protocol
+
+VALID_ACTIONS = objectnav_protocol().allowed_actions
 
 
 @dataclass(frozen=True)
@@ -41,6 +37,6 @@ class ObjectNavAgent(ABC):
         """Reset method-specific state at the beginning of an episode."""
 
     @abstractmethod
-    def act(self, observation: Mapping[str, Any]) -> str:
-        """Return one Habitat ObjectNav action name."""
+    def act(self, observation: Mapping[str, Any]) -> Any:
+        """Return a primitive name or a typed primitive/move/rotate command."""
         raise NotImplementedError
