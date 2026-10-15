@@ -1,9 +1,11 @@
 from .base import TaskProtocol
 from .objectnav import objectnav_protocol
+from .vln_ce import vln_ce_episode_uid, vln_ce_r2r_protocol
 
 
 _BUILTIN_PROTOCOLS = {
     "mp3d_objectnav_v1": objectnav_protocol,
+    "vln_ce_r2r_v1": vln_ce_r2r_protocol,
 }
 
 
@@ -21,4 +23,11 @@ def load_protocol(path=None):
     return TaskProtocol(**load_yaml(path))
 
 
-__all__ = ["TaskProtocol", "is_builtin_protocol", "load_protocol", "objectnav_protocol"]
+__all__ = [
+    "TaskProtocol",
+    "is_builtin_protocol",
+    "load_protocol",
+    "objectnav_protocol",
+    "vln_ce_episode_uid",
+    "vln_ce_r2r_protocol",
+]
