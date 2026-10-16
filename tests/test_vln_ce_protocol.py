@@ -7,7 +7,12 @@ from objectnav_eval.actions.converters import convert_command
 from objectnav_eval.agent import EpisodeInfo
 from objectnav_eval.config import load_yaml
 from objectnav_eval.evaluator import EvaluationConfig, Evaluator
-from objectnav_eval.tasks import is_builtin_protocol, load_protocol, vln_ce_r2r_protocol
+from objectnav_eval.tasks import (
+    is_builtin_protocol,
+    load_protocol,
+    vln_ce_r2r_official_protocol,
+    vln_ce_r2r_protocol,
+)
 from objectnav_eval.tasks.vln_ce import vln_ce_episode_uid
 
 SYNTHETIC_INSTRUCTION = "Leave the room and stop near the window."
@@ -91,6 +96,25 @@ def test_builtin_vln_protocol_matches_its_config_file():
     assert load_protocol("vln_ce_r2r_v1").sha256 == load_protocol(path).sha256
 
 
+def test_official_vln_protocol_is_separate_and_requires_full_metrics():
+    protocol = vln_ce_r2r_official_protocol()
+    assert is_builtin_protocol("vln_ce_r2r_official_v1")
+    assert protocol.task_id == "vln_ce_r2r_official_v1"
+    assert protocol.metric_provider == "objectnav_eval.metrics.vln_ce:VlnCeOfficialMetrics"
+    assert protocol.metric_parameters["success_distance"] == 3.0
+    assert protocol.required_metrics == (
+        "success", "spl", "distance_to_goal", "navigation_error",
+        "oracle_success", "path_length", "steps_taken", "ndtw", "sdtw",
+    )
+    assert protocol.sha256 == load_protocol(
+        Path(__file__).resolve().parents[1] / "configs/tasks/vln_ce_r2r_official.yaml"
+    ).sha256
+    # The old protocol remains byte-for-byte semantically separate.
+    assert vln_ce_r2r_protocol().required_metrics == (
+        "success", "spl", "distance_to_goal"
+    )
+
+
 def test_public_r2r_evaluator_config_uses_the_instruction_protocol():
     path = Path(__file__).resolve().parents[1] / "configs/mp3d_vln_r2r.yaml"
     config = load_yaml(path)
@@ -98,6 +122,16 @@ def test_public_r2r_evaluator_config_uses_the_instruction_protocol():
     assert config["task_protocol"] == "vln_ce_r2r_v1"
     assert config["benchmark"]["split"] == "val_unseen"
     assert "R2R_VLNCE_v1-3_preprocessed" in config["benchmark"]["data_path"]
+
+
+def test_public_official_r2r_config_requires_matching_ground_truth():
+    path = Path(__file__).resolve().parents[1] / "configs/mp3d_vln_r2r_official.yaml"
+    config = load_yaml(path)
+    assert config["task_protocol"] == "vln_ce_r2r_official_v1"
+    assert config["benchmark"]["split"] == "val_unseen"
+    assert config["benchmark"]["ground_truth_path"].endswith(
+        "/{split}/{split}_gt.json.gz"
+    )
 
 
 def test_vln_action_space_comes_from_the_task_config_not_objectnav():

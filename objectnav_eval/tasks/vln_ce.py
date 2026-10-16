@@ -106,3 +106,36 @@ def vln_ce_r2r_protocol() -> TaskProtocol:
         },
         action_parameters={"source": "resolved Habitat configuration"},
     )
+
+
+def vln_ce_r2r_official_protocol() -> TaskProtocol:
+    """Historical R2R-VLNCE evaluation semantics with 3 metre success."""
+
+    base = vln_ce_r2r_protocol()
+    return TaskProtocol(
+        task_id="vln_ce_r2r_official_v1",
+        protocol_version=1,
+        allowed_actions=base.allowed_actions,
+        allowed_observations=base.allowed_observations,
+        required_metrics=(
+            "success",
+            "spl",
+            "distance_to_goal",
+            "navigation_error",
+            "oracle_success",
+            "path_length",
+            "steps_taken",
+            "ndtw",
+            "sdtw",
+        ),
+        habitat_config=base.habitat_config,
+        episode_identity=base.episode_identity,
+        observation_specs=base.observation_specs,
+        action_parameters=base.action_parameters,
+        metric_provider="objectnav_eval.metrics.vln_ce:VlnCeOfficialMetrics",
+        metric_parameters={
+            "success_distance": 3.0,
+            "fast_dtw_radius": 1,
+            "metric_version": "vlnce-official-fastdtw-v1",
+        },
+    )

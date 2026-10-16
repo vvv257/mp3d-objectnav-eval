@@ -18,6 +18,8 @@ class TaskProtocol:
     episode_identity: str
     observation_specs: Mapping[str, Any] = field(default_factory=dict)
     action_parameters: Mapping[str, Any] = field(default_factory=dict)
+    metric_provider: str | None = None
+    metric_parameters: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.task_id or type(self.protocol_version) is not int or self.protocol_version < 1:
@@ -31,6 +33,8 @@ class TaskProtocol:
             object.__setattr__(self, name, tuple(values))
         if not self.habitat_config or not self.episode_identity:
             raise ValueError("Task requires habitat_config and episode_identity")
+        if self.metric_provider is not None and ":" not in self.metric_provider:
+            raise ValueError("metric_provider must be a module:Class entrypoint")
 
     def validate_action(self, action):
         if not isinstance(action, str) or action not in self.allowed_actions:

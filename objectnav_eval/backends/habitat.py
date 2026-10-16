@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -62,6 +63,7 @@ class HabitatBackend(EvaluationBackend):
         self,
         config_path: str,
         overrides: Sequence[str] | None = None,
+        metric_options: Mapping[str, Any] | None = None,
     ) -> None:
         try:
             import habitat
@@ -74,6 +76,8 @@ class HabitatBackend(EvaluationBackend):
         self._habitat = habitat
         self._config_path = str(Path(config_path))
         self._overrides = list(overrides or [])
+        self._metric_options = dict(metric_options or {})
+        self._metric_provider = None
 
         self._config = habitat.get_config(
             config_path=self._config_path,
@@ -94,6 +98,9 @@ class HabitatBackend(EvaluationBackend):
         observation = self._env.reset()
         episode = self._env.current_episode
 
+        if self._metric_provider is not None:
+            self._metric_provider.reset(episode)
+
         info = EpisodeInfo(
             episode_id=str(episode.episode_id),
             scene_id=str(episode.scene_id),
@@ -103,10 +110,16 @@ class HabitatBackend(EvaluationBackend):
         return info, observation
 
     def step(self, action: str) -> Mapping[str, Any]:
-        return self._env.step({"action": action})
+        observation = self._env.step({"action": action})
+        if self._metric_provider is not None:
+            self._metric_provider.update(action)
+        return observation
 
     def get_metrics(self) -> Mapping[str, Any]:
-        return self._env.get_metrics()
+        metrics = dict(self._env.get_metrics())
+        if self._metric_provider is not None:
+            metrics.update(self._metric_provider.get_metrics())
+        return metrics
 
     def close(self) -> None:
         self._env.close()
@@ -124,13 +137,22 @@ class HabitatBackend(EvaluationBackend):
         from omegaconf import OmegaConf
         resolved = OmegaConf.to_container(self._config, resolve=True)
         habitat = resolved["habitat"]
-        missing = set(protocol.required_metrics) - set(habitat["task"]["measurements"])
+        self._metric_provider = self._build_metric_provider(protocol)
+        provided = (
+            set(self._metric_provider.provided_metrics)
+            if self._metric_provider is not None else set()
+        )
+        missing = (
+            set(protocol.required_metrics)
+            - set(habitat["task"]["measurements"])
+            - provided
+        )
         if missing:
             raise ValueError(f"Habitat does not provide protocol metrics: {sorted(missing)}")
         sim = habitat["simulator"]
         self.action_parameters = {key: sim.get(key) for key in ("forward_step_size", "turn_angle", "tilt_angle")}
         self._protocol = protocol
-        return {
+        runtime = {
             "action_parameters": self.action_parameters,
             "success_criteria": _measurement_parameters(habitat["task"].get("measurements")),
             "effective_habitat_config_sha256": hashlib.sha256(json.dumps(resolved, sort_keys=True).encode()).hexdigest(),
@@ -139,6 +161,40 @@ class HabitatBackend(EvaluationBackend):
             "effective_environment": habitat["environment"],
             "available_actions": sorted(supported),
         }
+        if self._metric_provider is not None:
+            metric_runtime = self._metric_provider.runtime_metadata()
+            runtime["task_metrics"] = metric_runtime
+            # Keep the underlying Habitat threshold for diagnosis, but make
+            # the top-level criterion describe the metrics actually emitted.
+            runtime["habitat_success_criteria"] = runtime["success_criteria"]
+            runtime["success_criteria"] = {
+                **runtime["success_criteria"],
+                "success_distance": metric_runtime["success_distance"],
+                "source": metric_runtime["metric_provider"],
+            }
+        return runtime
+
+    def _build_metric_provider(self, protocol):
+        entrypoint = getattr(protocol, "metric_provider", None)
+        if entrypoint is None:
+            return None
+        module_name, class_name = entrypoint.split(":", 1)
+        provider_type = getattr(importlib.import_module(module_name), class_name)
+        provider = provider_type(
+            env=self._env,
+            options=self._metric_options,
+            parameters=protocol.metric_parameters,
+        )
+        if not set(protocol.required_metrics) <= set(provider.provided_metrics):
+            # Providers may supplement Habitat metrics, but every custom name
+            # still has to be declared before evaluation begins.
+            habitat_metrics = set(
+                self._config.habitat.task.measurements.keys()
+            )
+            missing = set(protocol.required_metrics) - set(provider.provided_metrics) - habitat_metrics
+            if missing:
+                raise ValueError(f"Metric provider does not provide: {sorted(missing)}")
+        return provider
 
     @property
     def protocol(self):

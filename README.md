@@ -144,9 +144,9 @@ transpose → dtype；深度单位转换参数由使用者根据运行元数据�
 ObjectNav 沿用原有 UID。评测器还会拒绝使用与 backend 已校验协议不一致的协议，
 避免默认 ObjectNav 协议套到别的任务环境上。
 
-### R2R 指令导航协议（vln_ce_r2r_v1）
+### R2R 指令导航
 
-`configs/tasks/vln_ce_r2r.yaml` 定义 VLN-CE R2R 协议，等价的内置写法是
+`configs/tasks/vln_ce_r2r.yaml` 是只使用 Habitat 内置三项指标的兼容协议，等价的内置写法是
 `task_protocol: vln_ce_r2r_v1`。该协议只描述 Habitat-Lab 0.2.4/0.3.3
 `benchmark/nav/vln_r2r.yaml` 实际组合出来的任务：
 
@@ -194,9 +194,38 @@ OBJECTNAV_TEST_VLN_EPISODE_SOURCE=/path/to/objectnav/mp3d/v1/val_mini/val_mini.j
   pytest -q tests/integration/test_vln_ce_task.py
 ```
 
-上述验证证明“指令导航可以规范接入统一评测器”，不等于已完整复刻历史
-VLN-CE 排行榜协议。当前 Habitat 内置配置不提供 nDTW，成功距离等语义以
-`run_metadata.json` 中实际生效配置为准，不得直接与其他 VLN-CE 协议的数字混排。
+正式评测使用 `vln_ce_r2r_official_v1` 和
+`configs/mp3d_vln_r2r_official.yaml`。它保留历史 R2R-VLNCE 的 3 米成功阈值，
+输出 `success`、`spl`、`distance_to_goal`/`navigation_error`、
+`oracle_success`、`path_length`、`steps_taken`、`ndtw` 和 `sdtw`。
+nDTW 使用官方 FastDTW radius=1 规则，需要与 episode 文件配套的
+`{split}_gt.json.gz`。
+
+从 [VLN-CE 官方仓库](https://github.com/jacobkrantz/VLN-CE#data) 下载
+`R2R_VLNCE_v1-3_preprocessed.zip`，解压后保持如下结构：
+
+```text
+data/datasets/R2R_VLNCE_v1-3_preprocessed/val_unseen/
+  val_unseen.json.gz
+  val_unseen_gt.json.gz
+data/scene_datasets/mp3d/<scene-id>/<scene-id>.glb
+```
+
+复制正式配置为 `*.local.yaml`，修改 `data_path`、`ground_truth_path` 和
+`scenes_dir`，再运行：
+
+```bash
+objectnav-eval \
+  --agent my_method.agent:MyInstructionAgent \
+  --config configs/mp3d_vln_r2r_official.local.yaml \
+  --output results/my_method_r2r_val_unseen
+```
+
+启动时会检查 GT 文件及 episode ID；GT 缺失或不匹配会直接报错。
+GT 路径、SHA256、指标实现版本和 3 米阈值会写入
+`run_metadata.json`，更换 GT 后不能混用 `--resume`。
+指标齐全不代表不同 Habitat 版本的数值天然可比；正式报告仍要标注
+Habitat-Lab/Sim 版本，不与历史排行榜或另一版本直接混排。
 
 ## 运行
 
@@ -236,12 +265,15 @@ episode 仍可续跑。
 
 ## 指标
 
-指标直接读取 `Habitat.Env.get_metrics()`，不在本项目中重新实现：
+ObjectNav 和兼容 R2R 协议直接读取 `Habitat.Env.get_metrics()`：
 
 - `success`：调用 `stop` 且距离目标小于成功阈值。
 - `spl`：Success weighted by Path Length。
 - `soft_spl`：使用连续进度替代二值成功的 SPL。
 - `distance_to_goal`：到最近有效目标的 Habitat geodesic distance。
+
+正式 R2R 协议额外在评测器内部累计实际位置轨迹，按官方公式计算
+3 米 SR/SPL、NE、OSR、TL、Steps、nDTW 和 SDTW。这些位置不会传给 Agent。
 
 正式比较时，必须保持 Habitat 版本、数据 split、episode 顺序、传感器、动作空间、
 步数上限和成功距离一致。
@@ -266,7 +298,17 @@ evaluator_config.yaml  本次运行使用的原始配置
 代码指纹不能覆盖所有动态导入、依赖与权重，因此 `reproducibility_complete` 明确为 false；
 完整复现还需使用者提供下述方法依赖和模型记录。
 
-单元测试：`pytest -q`（没有数据时真实仿真测试默认跳过）。真实验收：
+单元测试：`pytest -q`（没有数据时真实仿真测试默认跳过）。正式 R2R
+真实指标测试：
+
+```bash
+OBJECTNAV_TEST_VLN_SCENES_DIR=/path/to/scene_datasets \
+OBJECTNAV_TEST_R2R_DATA_PATH=/path/to/val_unseen.json.gz \
+OBJECTNAV_TEST_R2R_GT_PATH=/path/to/val_unseen_gt.json.gz \
+  pytest -q tests/integration/test_vln_ce_official.py
+```
+
+ObjectNav 真实验收：
 
 ```bash
 OBJECTNAV_TEST_CONFIG=configs/mp3d_objectnav_val_mini.local.yaml \

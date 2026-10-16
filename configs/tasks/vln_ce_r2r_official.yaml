@@ -1,0 +1,29 @@
+task_id: vln_ce_r2r_official_v1
+protocol_version: 1
+allowed_actions: [stop, move_forward, turn_left, turn_right]
+allowed_observations: [rgb, depth, instruction]
+required_metrics:
+  - success
+  - spl
+  - distance_to_goal
+  - navigation_error
+  - oracle_success
+  - path_length
+  - steps_taken
+  - ndtw
+  - sdtw
+habitat_config: benchmark/nav/vln_r2r.yaml
+episode_identity: objectnav_eval.tasks.vln_ce:vln_ce_episode_uid
+observation_specs:
+  rgb: {layout: HWC, dtype: uint8, range: [0, 255]}
+  depth: {layout: HWC, dtype: float32, units: resolved Habitat depth configuration}
+  instruction:
+    dtype: mapping
+    fields: [text, tokens, trajectory_id]
+    source: Habitat InstructionSensor
+action_parameters: {source: resolved Habitat configuration}
+metric_provider: objectnav_eval.metrics.vln_ce:VlnCeOfficialMetrics
+metric_parameters:
+  success_distance: 3.0
+  fast_dtw_radius: 1
+  metric_version: vlnce-official-fastdtw-v1

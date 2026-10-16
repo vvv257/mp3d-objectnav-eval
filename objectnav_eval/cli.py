@@ -306,8 +306,16 @@ def main() -> None:
         resume=args.resume,
     )
     try:
+        metric_options = {}
+        if benchmark.get("ground_truth_path"):
+            split = benchmark.get("split", "")
+            metric_options["ground_truth_path"] = str(
+                benchmark["ground_truth_path"]
+            ).format(split=split)
         backend = HabitatBackend(
-            config_path=benchmark["habitat_config"], overrides=overrides
+            config_path=benchmark["habitat_config"],
+            overrides=overrides,
+            metric_options=metric_options,
         )
     except BaseException as exc:
         store.record_failure(_run_failure("backend.init", exc))

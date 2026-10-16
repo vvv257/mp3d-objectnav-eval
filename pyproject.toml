@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mp3d-objectnav-eval"
-version = "0.2.1"
+version = "0.3.0"
 description = "A lightweight, method-agnostic evaluator for MP3D ObjectNav agents on Habitat-Lab."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -23,6 +23,9 @@ objectnav-eval = "objectnav_eval.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["objectnav_eval*", "examples*"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
