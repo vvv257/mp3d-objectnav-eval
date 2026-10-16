@@ -2,18 +2,31 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from .base import TaskProtocol
+
+
+def _finite_vector(value, field: str) -> list[float]:
+    try:
+        result = [float(item) for item in value]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"VLN-CE episode requires numeric {field}") from exc
+    if not result or any(not math.isfinite(item) for item in result):
+        raise ValueError(f"VLN-CE episode requires finite {field}")
+    return result
 
 
 def vln_ce_episode_uid(episode) -> str:
     """Build a machine-independent ID for one VLN-CE instruction episode.
 
     Habitat renumbers `episode_id` while loading datasets, and one R2R
-    trajectory can carry several instructions, so identity uses only
-    task-defining fields: scene, language instruction and `trajectory_id`.
-    This policy is separate from the ObjectNav one and is never shared with it.
+    trajectory can carry several instructions. Identity therefore combines
+    scene, language instruction, `trajectory_id`, start pose and goals. The
+    physical fields prevent resume from mixing results after a dataset is
+    replaced in place while retaining its language identifiers. This policy is
+    separate from the ObjectNav one and is never shared with it.
     """
 
     scene_path = Path(str(episode.scene_id))
@@ -30,10 +43,28 @@ def vln_ce_episode_uid(episode) -> str:
     if not isinstance(text, str) or not text.strip():
         raise ValueError("VLN-CE episode requires a non-empty instruction_text")
 
+    goals = getattr(episode, "goals", None)
+    if not goals:
+        raise ValueError("VLN-CE episode requires at least one goal")
+    goal_payload = []
+    for index, goal in enumerate(goals):
+        radius = getattr(goal, "radius", None)
+        if radius is not None:
+            radius = float(radius)
+            if not math.isfinite(radius):
+                raise ValueError("VLN-CE episode requires finite goal radius")
+        goal_payload.append({
+            "position": _finite_vector(getattr(goal, "position", None), f"goals[{index}].position"),
+            "radius": radius,
+        })
+
     payload = {
         "scene": scene_key,
         "instruction": text,
         "trajectory_id": str(getattr(episode, "trajectory_id", "")),
+        "start_position": _finite_vector(getattr(episode, "start_position", None), "start_position"),
+        "start_rotation": _finite_vector(getattr(episode, "start_rotation", None), "start_rotation"),
+        "goals": goal_payload,
     }
 
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")

@@ -192,7 +192,9 @@ def build_run_metadata(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Evaluate an agent on MP3D ObjectNav")
+    parser = argparse.ArgumentParser(
+        description="Evaluate a navigation agent with an explicit task protocol"
+    )
     parser.add_argument("--agent", required=True, help="module:ClassOrFactory")
     parser.add_argument("--config", required=True, help="Evaluator YAML")
     parser.add_argument("--output", required=True, help="Output directory")

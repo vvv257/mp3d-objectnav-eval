@@ -156,8 +156,9 @@ ObjectNav 沿用原有 UID。评测器还会拒绝使用与 backend 已校验协
   `InstructionSensor` 给出的 `{text, tokens, trajectory_id}` 映射。
 - 必需指标是该配置实际提供的 `success`、`spl`、`distance_to_goal`；0.2.4 的 VLN 配置
   不提供 `ndtw`，因此不写进协议。
-- Episode 身份用场景 + 指令文本 + `trajectory_id`（`vln_ce_episode_uid`），
-  与 ObjectNav 的 UID 策略互不共用。
+- Episode 身份用场景、指令文本、`trajectory_id`、起点位姿和目标
+  共同生成（`vln_ce_episode_uid`），与 ObjectNav 的 UID 策略互不共用。
+  数据集在原路径被替换且物理 episode 改变时，断点续跑会因 UID 不同而拒绝。
 - 运动参数与成功判据都从生效的 Habitat 配置读取后写入 `run_metadata.json`：
   VLN-CE 的 `turn_angle` 是 15 度（不是 ObjectNav 的 30 度），`forward_step_size` 为
   `0.25`，`success_criteria` 记录 `distance_to` 与 `success_distance`。

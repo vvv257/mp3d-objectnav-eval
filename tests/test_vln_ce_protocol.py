@@ -17,12 +17,23 @@ class StubInstruction:
     instruction_text: str
 
 
+@dataclass
+class StubGoal:
+    position: tuple[float, float, float]
+    radius: float = 3.0
+
+
 class StubEpisode:
     def __init__(self, scene_id="/data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb",
-                 instruction_text=SYNTHETIC_INSTRUCTION, trajectory_id=7):
+                 instruction_text=SYNTHETIC_INSTRUCTION, trajectory_id=7,
+                 start_position=(1.0, 2.0, 3.0), start_rotation=(0.0, 0.0, 0.0, 1.0),
+                 goal_position=(4.0, 5.0, 6.0)):
         self.scene_id = scene_id
         self.instruction = StubInstruction(instruction_text)
         self.trajectory_id = trajectory_id
+        self.start_position = start_position
+        self.start_rotation = start_rotation
+        self.goals = [StubGoal(goal_position)]
 
 
 class VlnBackend:
@@ -103,6 +114,9 @@ def test_vln_episode_uid_uses_scene_instruction_and_trajectory():
     assert reference != vln_ce_episode_uid(StubEpisode(instruction_text="Turn left at the sofa."))
     assert reference != vln_ce_episode_uid(StubEpisode(trajectory_id=8))
     assert reference != vln_ce_episode_uid(StubEpisode(scene_id="/data/scene_datasets/mp3d/2azQ1b91cZZ/2azQ1b91cZZ.glb"))
+    assert reference != vln_ce_episode_uid(StubEpisode(start_position=(2.0, 2.0, 3.0)))
+    assert reference != vln_ce_episode_uid(StubEpisode(start_rotation=(0.0, 1.0, 0.0, 0.0)))
+    assert reference != vln_ce_episode_uid(StubEpisode(goal_position=(5.0, 5.0, 6.0)))
     assert reference.startswith("17DRP5sb8fy:")
     for blank in ("", "   "):
         with pytest.raises(ValueError, match="instruction_text"):
