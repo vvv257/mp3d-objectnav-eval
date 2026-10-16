@@ -144,10 +144,10 @@ transpose → dtype；深度单位转换参数由使用者根据运行元数据�
 ObjectNav 沿用原有 UID。评测器还会拒绝使用与 backend 已校验协议不一致的协议，
 避免默认 ObjectNav 协议套到别的任务环境上。
 
-### VLN-CE 协议（vln_ce_r2r_v1）
+### R2R 指令导航协议（vln_ce_r2r_v1）
 
 `configs/tasks/vln_ce_r2r.yaml` 定义 VLN-CE R2R 协议，等价的内置写法是
-`task_protocol: vln_ce_r2r_v1`。该协议只描述 Habitat-Lab 0.2.4
+`task_protocol: vln_ce_r2r_v1`。该协议只描述 Habitat-Lab 0.2.4/0.3.3
 `benchmark/nav/vln_r2r.yaml` 实际组合出来的任务：
 
 - 动作是 `stop`、`move_forward`、`turn_left`、`turn_right`（`VLN-v0` 任务的动作空间，
@@ -163,7 +163,25 @@ ObjectNav 沿用原有 UID。评测器还会拒绝使用与 backend 已校验协
   VLN-CE 的 `turn_angle` 是 15 度（不是 ObjectNav 的 30 度），`forward_step_size` 为
   `0.25`，`success_criteria` 记录 `distance_to` 与 `success_distance`。
 
-**验证状态**：官方 R2R_VLNCE 数据集尚未接入，本协议只经过合成数据集验证。
+`configs/mp3d_vln_r2r.yaml` 是公开评测配置模板。复制为 `*.local.yaml` 并将数据、
+场景路径改成本机路径后，可以用不继承评测器基类的最小 Agent 验收语言观测接入：
+
+```bash
+cp configs/mp3d_vln_r2r.yaml configs/mp3d_vln_r2r.local.yaml
+# 编辑 local 文件中的 data_path 和 scenes_dir
+objectnav-eval \
+  --agent examples.instruction_smoke_agent:InstructionSmokeAgent \
+  --config configs/mp3d_vln_r2r.local.yaml \
+  --output results/r2r_instruction_smoke \
+  --num-episodes 1
+```
+
+`InstructionSmokeAgent` 会明确读取 `instruction.text`，前进两步后停止。它只验证 Agent
+接口、观测权限、动作和记录链路，不是指令跟随算法。已使用真实 R2R train episode
+和 Matterport3D 场景在 Habitat 0.2.4、0.3.3 各运行一次，两个版本的 Episode 身份、
+动作数和指标一致。
+
+没有官方 R2R 数据时，仍可使用合成数据集成测试检查协议接线。
 `tests/integration/vln_ce_fixture.py` 用 ObjectNav episode 的真实起点与目标物体视点、
 真实 MatterPort3D 场景和导航网格生成合成 VLN 数据集，指令文本是占位内容。
 真实 VLN-v0 环境上已验证语言观测能到达 Agent、观测权限过滤、Episode 身份、
@@ -176,10 +194,9 @@ OBJECTNAV_TEST_VLN_EPISODE_SOURCE=/path/to/objectnav/mp3d/v1/val_mini/val_mini.j
   pytest -q tests/integration/test_vln_ce_task.py
 ```
 
-接入官方数据集时，只要把评测配置的 `benchmark.data_path` 指向
-`R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz`、`scenes_dir` 指向 MP3D 场景目录，
-并保留 `task_protocol: vln_ce_r2r_v1`；在拿到真实 Episode 指标之前，
-不要对外声称 VLN-CE 已正式支持。
+上述验证证明“指令导航可以规范接入统一评测器”，不等于已完整复刻历史
+VLN-CE 排行榜协议。当前 Habitat 内置配置不提供 nDTW，成功距离等语义以
+`run_metadata.json` 中实际生效配置为准，不得直接与其他 VLN-CE 协议的数字混排。
 
 ## 运行
 

@@ -99,11 +99,11 @@ episode identity policy, and where motion parameters come from. Two protocols
 ship with the evaluator:
 
 - `mp3d_objectnav_v1` (default, protocol version 1): `configs/tasks/mp3d_objectnav_v1.yaml`
-- `vln_ce_r2r_v1`: `configs/tasks/vln_ce_r2r.yaml`, mirroring Habitat-Lab 0.2.4
+- `vln_ce_r2r_v1`: `configs/tasks/vln_ce_r2r.yaml`, mirroring Habitat-Lab 0.2.4/0.3.3
   `benchmark/nav/vln_r2r.yaml` — actions `stop`, `move_forward`, `turn_left`,
   `turn_right`; observations `rgb`, `depth`, `instruction`; metrics `success`,
   `spl`, `distance_to_goal` (that config provides no `ndtw`); episode identity
-  from scene, instruction text and `trajectory_id`.
+  from scene, instruction text, `trajectory_id`, start pose and goals.
 
 Each task reads its motion parameters and success criteria from the resolved
 Habitat configuration; no protocol hard-codes step sizes or thresholds. The
@@ -111,11 +111,15 @@ backend refuses a protocol whose actions, observations or metrics the resolved
 environment does not provide, and the evaluator refuses to run when its
 protocol differs from the one the backend validated.
 
-The VLN-CE protocol has only been exercised on a synthetic dataset built from
-real scenes and navmeshes (see README). The official R2R_VLNCE episodes are not
-integrated, so `vln_ce_r2r_v1` results are not VLN-CE benchmark results and must
-not be compared with published VLN-CE numbers. Results from different task
-protocols are not comparable with each other by construction.
+The instruction-navigation path has been smoke-tested with a real R2R train
+episode and Matterport3D scene on Habitat-Lab 0.2.4 and 0.3.3. Synthetic
+integration tests cover the same wiring when official episodes are unavailable.
+This proves that R2R agents can use the common evaluator interface; it does not
+reproduce the historical VLN-CE leaderboard protocol. In particular, the
+built-in Habitat config does not provide nDTW, and its resolved success criteria
+must be read from run metadata. These results must not be compared with
+published VLN-CE numbers. Results from different task protocols are not
+comparable with each other by construction.
 
 ## Reproducibility
 

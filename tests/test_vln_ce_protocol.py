@@ -5,6 +5,7 @@ import pytest
 
 from objectnav_eval.actions.converters import convert_command
 from objectnav_eval.agent import EpisodeInfo
+from objectnav_eval.config import load_yaml
 from objectnav_eval.evaluator import EvaluationConfig, Evaluator
 from objectnav_eval.tasks import is_builtin_protocol, load_protocol, vln_ce_r2r_protocol
 from objectnav_eval.tasks.vln_ce import vln_ce_episode_uid
@@ -88,6 +89,15 @@ def test_builtin_vln_protocol_matches_its_config_file():
     path = Path(__file__).resolve().parents[1] / "configs/tasks/vln_ce_r2r.yaml"
     assert is_builtin_protocol("vln_ce_r2r_v1") and not is_builtin_protocol("tasks/x.yaml")
     assert load_protocol("vln_ce_r2r_v1").sha256 == load_protocol(path).sha256
+
+
+def test_public_r2r_evaluator_config_uses_the_instruction_protocol():
+    path = Path(__file__).resolve().parents[1] / "configs/mp3d_vln_r2r.yaml"
+    config = load_yaml(path)
+
+    assert config["task_protocol"] == "vln_ce_r2r_v1"
+    assert config["benchmark"]["split"] == "val_unseen"
+    assert "R2R_VLNCE_v1-3_preprocessed" in config["benchmark"]["data_path"]
 
 
 def test_vln_action_space_comes_from_the_task_config_not_objectnav():

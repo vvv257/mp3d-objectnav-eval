@@ -1,0 +1,19 @@
+benchmark:
+  name: mp3d_vln_r2r_val_unseen
+  habitat_config: benchmark/nav/vln_r2r.yaml
+  split: val_unseen
+  data_path: data/datasets/R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz
+  scenes_dir: data/scene_datasets/
+  max_episode_steps: 500
+  seed: 100
+  overrides:
+    - habitat.environment.iterator_options.shuffle=False
+
+task_protocol: vln_ce_r2r_v1
+
+evaluation:
+  allowed_observations:
+    - rgb
+    - depth
+    - instruction
+  strict_actions: true

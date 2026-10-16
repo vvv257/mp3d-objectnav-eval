@@ -2,6 +2,8 @@ import subprocess
 import sys
 from types import ModuleType
 
+import pytest
+
 from objectnav_eval.agent import ObjectNavAgent
 from objectnav_eval.loading import load_agent
 
@@ -31,3 +33,18 @@ def test_installed_example_agent_is_importable_outside_repository(tmp_path):
     )
 
     assert completed.returncode == 0, completed.stderr
+
+
+def test_instruction_smoke_agent_is_structural_and_reads_language_observation():
+    agent = load_agent("examples.instruction_smoke_agent:InstructionSmokeAgent")
+
+    assert not isinstance(agent, ObjectNavAgent)
+    agent.reset(object())
+    assert agent.act({"instruction": {"text": "Walk through the doorway."}}) == "move_forward"
+    assert agent.last_instruction == "Walk through the doorway."
+    assert agent.act({"instruction": {"text": "Walk through the doorway."}}) == "move_forward"
+    assert agent.act({"instruction": {"text": "Walk through the doorway."}}) == "stop"
+
+    agent.reset(object())
+    with pytest.raises(ValueError, match="instruction.text"):
+        agent.act({"rgb": object()})
