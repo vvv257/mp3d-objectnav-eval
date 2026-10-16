@@ -13,7 +13,7 @@ Agent。评测器只负责环境、episode、观测过滤、动作校验、指�
 - Matterport3D 场景数据
 
 两个版本都已用真实 MP3D `val_mini` episode 验证 CLI、观测、动作、指标和输出。
-但完整 split 的跨版本数值一致性尚未验证，正式结果必须注明 Habitat-Lab 与
+正式结果注明 Habitat-Lab 与
 Habitat-Sim 版本，不要把 0.2.4 和 0.3.3 的结果混在同一排名中。
 
 Habitat 和 MP3D 不会由本项目自动安装或分发，以免覆盖使用者已有的仿真环境。
